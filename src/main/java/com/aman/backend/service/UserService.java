@@ -1,10 +1,11 @@
 package com.aman.backend.service;
 
-import com.aman.backend.dto.LoginRequest;      // <-- NEW
-import com.aman.backend.dto.LoginResponse;     // <-- NEW
+import com.aman.backend.dto.LoginRequest;
+import com.aman.backend.dto.LoginResponse;
 import com.aman.backend.dto.SignupRequest;
 import com.aman.backend.entity.User;
 import com.aman.backend.repository.UserRepository;
+import com.aman.backend.security.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -13,16 +14,19 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     public UserService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
 
-    // ==========================
-    // SIGNUP METHOD
-    // ==========================
+    // =========================================
+    // USER REGISTRATION
+    // =========================================
     public void registerUser(SignupRequest request) {
 
         // Check if email already exists
@@ -43,9 +47,9 @@ public class UserService {
         userRepository.save(user);
     }
 
-    // =====================================================
-    // NEW LOGIN METHOD (Added for Login functionality)
-    // =====================================================
+    // =========================================
+    // USER LOGIN
+    // =========================================
     public LoginResponse loginUser(LoginRequest request) {
 
         // Find user by email
@@ -53,12 +57,15 @@ public class UserService {
                 .orElseThrow(() ->
                         new RuntimeException("Invalid email or password"));
 
-        // Compare entered password with encrypted password
+        // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid email or password");
         }
 
-        // Login successful
-        return new LoginResponse("Login Successful");
+        // Generate JWT Token
+        String token = jwtUtil.generateToken(user.getEmail());
+
+        // Return token
+        return new LoginResponse(token);
     }
 }
